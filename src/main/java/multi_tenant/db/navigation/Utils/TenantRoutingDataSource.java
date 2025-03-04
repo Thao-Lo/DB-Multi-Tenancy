@@ -1,5 +1,8 @@
 package multi_tenant.db.navigation.Utils;
 
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -7,19 +10,31 @@ import java.util.concurrent.ConcurrentHashMap;
 import javax.sql.DataSource;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
+import org.springframework.context.annotation.Primary;
 import org.springframework.jdbc.datasource.lookup.AbstractRoutingDataSource;
 import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Component;
 
 import com.zaxxer.hikari.HikariDataSource;
 
+@Component
+@Lazy
 //extends from parent abstract: AbstractDataSource - getConnection()
 public class TenantRoutingDataSource extends AbstractRoutingDataSource {
-	@Autowired
-	private DataSourceUtil dataSourceUtil;
-
+	
+	private final DataSourceUtil dataSourceUtil;
 	private final Map<Object, Object> dataSourceMap = new ConcurrentHashMap<>();
 	private final Map<Object, Long> lastUsedTime = new ConcurrentHashMap<>();
 
+	public TenantRoutingDataSource(DataSourceUtil dataSourceUtil) {
+		this.dataSourceUtil = dataSourceUtil;
+		setTargetDataSources(new HashMap<>());
+		setDefaultTargetDataSource(dataSourceUtil.createDataSource("db_navigation_global_multi_tenant"));
+		afterPropertiesSet();
+	}
+	
+	
 	@Override
 	protected Object determineCurrentLookupKey() {
 		// dbName
@@ -30,7 +45,7 @@ public class TenantRoutingDataSource extends AbstractRoutingDataSource {
 	}
 
 	@Override
-	protected DataSource determineTargetDataSource() {
+	public DataSource determineTargetDataSource() {
 		String tenant = (String) determineCurrentLookupKey();
 
 		dataSourceMap.computeIfAbsent(tenant, key -> {
@@ -39,7 +54,7 @@ public class TenantRoutingDataSource extends AbstractRoutingDataSource {
 			return dataSourceUtil.createDataSource(tenant);
 		});
 
-		lastUsedTime.put(tenant, System.currentTimeMillis()); // update connection time to the new time
+		lastUsedTime.put(tenant, System.currentTimeMillis()); // update connection time to the new time		
 		return (DataSource) dataSourceMap.get(tenant);
 	}
 
