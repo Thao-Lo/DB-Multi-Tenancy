@@ -37,11 +37,17 @@ public class MultiTenantDataSourceConfig {
 	@Autowired
 	private DataSourceUtil dataSourceUtil;
 	
+//	@Autowired
+	private final TenantRoutingDataSource tenantRoutingDataSource;
+	public MultiTenantDataSourceConfig (TenantRoutingDataSource tenantRoutingDataSource) {
+		this.tenantRoutingDataSource = tenantRoutingDataSource;
+	}
+	
 	private static final Logger logger = LoggerFactory.getLogger(MultiTenantDataSourceConfig.class);
 	
 	@Bean(name = "multiTenantDataSource")
 	public TenantRoutingDataSource multiTenantDataSource() {
-		TenantRoutingDataSource tenantRoutingDataSource = new TenantRoutingDataSource();
+//		TenantRoutingDataSource tenantRoutingDataSource = new TenantRoutingDataSource();
 		
 		//add default DataSource
 		tenantRoutingDataSource.addDataSource("default", dataSourceUtil.createDataSource("db_navigation_global_multi_tenant"));
