@@ -3,6 +3,8 @@ package multi_tenant.db.navigation.Interceptor;
 import java.io.IOException;
 import java.util.List;
 
+import javax.sql.DataSource;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,6 +23,7 @@ import multi_tenant.db.navigation.JWT.JwtTokenProvider;
 import multi_tenant.db.navigation.Service.OwnerService;
 import multi_tenant.db.navigation.Service.TenantService;
 import multi_tenant.db.navigation.Utils.TenantContext;
+import multi_tenant.db.navigation.Utils.TenantRoutingDataSource;
 
 @Component
 public class TenantInterceptor implements HandlerInterceptor {
@@ -30,68 +33,94 @@ public class TenantInterceptor implements HandlerInterceptor {
 	private OwnerService ownerService;
 	@Autowired
 	JwtTokenProvider jwtTokenProvider;
-
+	@Autowired
+	TenantRoutingDataSource tenantRoutingDataSource;
 	private static final Logger logger = LoggerFactory.getLogger(TenantInterceptor.class);
 
 	@Override
 	public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler)
 			throws IOException {
 		String shopName = request.getHeader("shop-name");
+		String globalUser = request.getHeader("global-user");
 		// get email and roles from JWT
 		String authHeader = request.getHeader("Authorization");
-
+		
+		//Login without JWT 
 		if (authHeader == null && shopName == null) {
-			getGlobalTenant();
-			return true;
-		}
-
-		if (shopName != null) {
-			//no JWT
-			if (authHeader == null) {
-				System.out.println("Interceptor: " + shopName);
-
-				String databaseName = tenantService.getDatabaseNameByShopId(shopName).getDbName();
-				TenantContext.setCurrentTenant(databaseName);
-
-				logger.info("Tenant set to: {}", databaseName);
+			//SHOULD KEEP? CHECK AGAIN
+			if (globalUser == null) {
+				getGlobalTenant();
 				return true;
+			}
 
-			} //with JWT
-			else if (authHeader != null && authHeader.startsWith("Bearer ")) {
-				String token = authHeader.substring(7);
+			if (globalUser.equals("DEVELOPER") || globalUser.equals("OWNER")) {
+				TenantContext.setGlobalUser(globalUser);
+				getGlobalTenant();
+				return true;
+			} else {
+				sendForbiddenResponse(response, "Incorrect Global User.");
+			}
 
-				Claims claims = jwtTokenProvider.validateToken(token);
-				String email = claims.getSubject();
-				List<String> roles = extractRoles(claims);
-				if (roles == null) {
-					sendForbiddenResponse(response, "Role is not found");
-					return false;
-				}
-				
-				System.out.println("Owner roles" + roles.toString());
-				if (roles.contains("OWNER")) {
-					Owner owner = ownerService.getOwnerByEmail(email);
-					// check if Owners has ShopName
-					List<Tenant> tenants = tenantService.getTenantsByOwnerId(owner.getId());
-					for (Tenant tenant : tenants) {
-						if (tenant.getName().equals(shopName)) {
-							TenantContext.setCurrentTenant(tenant.getDbName());
-							return true;
-						}
+		}
+		// if(shopName != null && globalUser != null) -> never happend
+
+		if (shopName != null && authHeader == null) {
+			// no JWT
+
+			System.out.println("Interceptor: " + shopName);
+
+			String databaseName = tenantService.getDatabaseNameByShopId(shopName).getDbName();
+			TenantContext.setCurrentTenant(databaseName);
+			forceDatabaseConnection();
+			logger.info("Tenant set to: {}", databaseName);
+			return true;
+
+		}
+		// with JWT
+		if (authHeader != null && authHeader.startsWith("Bearer ")) {
+			String token = authHeader.substring(7);
+
+			Claims claims = jwtTokenProvider.validateToken(token);
+			String email = claims.getSubject();
+			List<String> roles = extractRoles(claims);
+			System.out.println("intercepter jwt roles:" + roles.toString());
+			if (roles == null || roles.isEmpty()) {
+				sendForbiddenResponse(response, "Role is not found");
+				return false;
+			}
+
+			System.out.println("Owner roles" + roles.toString());
+			if(shopName == null) {
+				getGlobalTenant();
+				return true;
+			}
+			if (roles.contains("ROLE_OWNER")) {
+				Owner owner = ownerService.getOwnerByEmail(email);
+				// check if Owners has ShopName
+				List<Tenant> tenants = tenantService.getTenantsByOwnerId(owner.getId());
+				for (Tenant tenant : tenants) {
+					if (tenant.getName().equals(shopName)) {
+						TenantContext.setCurrentTenant(tenant.getDbName());
+						return true;
 					}
-					// wont come to controller
-					sendForbiddenResponse(response, "Tenant is not found");
-					return false;
-				} else { // roles not contains OWNERS
-					System.out.println("Interceptor: " + shopName);
-
-					String databaseName = tenantService.getDatabaseNameByShopId(shopName).getDbName();
-					TenantContext.setCurrentTenant(databaseName);
-
-					logger.info("Tenant set to: {}", databaseName);
 				}
+				// wont come to controller
+				sendForbiddenResponse(response, "Tenant is not found");
+				return false;
 			}
 		}
+		// authHeader != null -> user(tenant) with Jwt
+		// roles not contains OWNERS
+		if (shopName != null) {
+			System.out.println("Interceptor: " + shopName);
+
+			String databaseName = tenantService.getDatabaseNameByShopId(shopName).getDbName();
+			TenantContext.setCurrentTenant(databaseName);
+			forceDatabaseConnection();
+			logger.info("Tenant set to: {}", databaseName);
+
+		}
+
 		return true;
 	}
 
@@ -104,7 +133,7 @@ public class TenantInterceptor implements HandlerInterceptor {
 	private void getGlobalTenant() {
 		logger.warn("Shop-name header is missing");
 		TenantContext.setCurrentTenant("default");
-		TenantContext.clear();
+		
 	}
 
 	// convert <String,Object> roles as a object to String
@@ -114,12 +143,26 @@ public class TenantInterceptor implements HandlerInterceptor {
 
 		if (roleObject == null)
 			return null;
-		return objectMapper.convertValue(roleObject, new TypeReference<List<String>>() {
+		
+		// TypeReference<List<String>>(): to read comflex type, not List.class, missing String
+		return objectMapper.convertValue(roleObject, new TypeReference<List<String>>() { 
 		});
 	}
 
 	private void sendForbiddenResponse(HttpServletResponse response, String message) throws IOException {
 		response.setStatus(HttpServletResponse.SC_FORBIDDEN);
 		response.getWriter().write("{\"error\": \"" + message + "\"}");
+	}
+	private void forceDatabaseConnection() {
+	    try {
+	        String currentTenant = TenantContext.getCurrentTenant();	       
+	        if (currentTenant != null) {
+	            logger.info("Forcing database initialization for tenant: {}", currentTenant);
+	            DataSource ds = tenantRoutingDataSource.determineTargetDataSource();
+	            ds.getConnection().close(); // Open & Close a connection to initialize it early
+	        }
+	    } catch (Exception e) {
+	        logger.error("Failed to force database initialization.", e);
+	    }
 	}
 }
