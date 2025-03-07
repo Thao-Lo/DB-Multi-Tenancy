@@ -1,6 +1,7 @@
 
 package multi_tenant.db.navigation.Controller;
 
+import java.security.Principal;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -9,6 +10,7 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -17,12 +19,18 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import jakarta.servlet.http.HttpServletRequest;
+import multi_tenant.db.navigation.DTO.RegisterRequest;
+import multi_tenant.db.navigation.DTO.ResetPasswordRequest;
 import multi_tenant.db.navigation.JWT.JwtTokenProvider;
 import multi_tenant.db.navigation.Service.CustomUserDetailsService;
+import multi_tenant.db.navigation.Service.RegisterService;
+import multi_tenant.db.navigation.Service.ResetPasswordService;
 
 @RestController
 @RequestMapping("api/")
@@ -33,6 +41,12 @@ public class AuthController {
 
 	@Autowired
 	private AuthenticationManager authenticationManager;
+	
+	@Autowired
+	private RegisterService registerService;
+	
+	@Autowired
+	private ResetPasswordService resetPasswordService;
 	
 	private static final Logger logger = LoggerFactory.getLogger(UserController.class);
 
@@ -49,6 +63,7 @@ public class AuthController {
 			String accessToken = jwtTokenProvider.generateAccessToken(email, roles);
 	        String refreshToken = jwtTokenProvider.generateRefreshToken(email, roles);
 	        
+	        logger.info("Successfully login and generate tokens for: {}", email);
 	        Map<String, Object> response = new HashMap<>();
 			response.put("message", "Login successfully.");
 			response.put("accessToken", accessToken);
@@ -58,5 +73,49 @@ public class AuthController {
 			return new ResponseEntity<>(Map.of("error", "Invalid Username or Email."), HttpStatus.BAD_REQUEST);
 		}
 	}
+	
+	/* DONE = DTO: registerBody 
+	 * interceptor: connect to correct db
+	 * jwt check role - Principal 
+	 * create new user 		 
+	 * send email to change password
+	 * password: 
+	 * 	- reset-token & expired token 
+	 * 	- 
+	 **/
+	@PostMapping("/register")
+	public ResponseEntity<Object> register(@RequestBody RegisterRequest request, Principal principal, HttpServletRequest httpRequest) {	
+	String shopName = httpRequest.getHeader("shop-name");
+	try {
+		registerService.registerNewUser(request, principal.getName(), shopName);
+		return new ResponseEntity<>(Map.of("message", "Please check your email to reset password."), HttpStatus.OK);
+		
+	}catch(IllegalArgumentException e) {
+		return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.NOT_FOUND);
+	}catch(RuntimeException e) {
+		return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.BAD_REQUEST);
+	}catch(Exception e) {
+		return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.BAD_REQUEST);
+	}	
+	}
+	
+	@PostMapping("/reset-password")
+	public ResponseEntity<Object> resetPassword(@RequestBody ResetPasswordRequest request, HttpServletRequest httpRequest) {	
+		String shopName = httpRequest.getHeader("shop-name");
+		String globalUser = httpRequest.getHeader("global-user");
+		try {
+			resetPasswordService.resetUserPassword(request.getToken(), request.getNewPassword(), shopName, globalUser);
+			return new ResponseEntity<>(Map.of("message", "Successfully reset new password."),HttpStatus.OK);
+		}catch(IllegalArgumentException e) {
+			return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.NOT_FOUND);
+		}catch(RuntimeException e) {
+			return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.NOT_FOUND);
+		}
+		catch(Exception e) {
+			return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.NOT_FOUND);
+		}
+	
+	}
+	
 	
 }
