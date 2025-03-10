@@ -14,7 +14,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-@MappedSuperclass
+@MappedSuperclass // parent class, no table in db
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

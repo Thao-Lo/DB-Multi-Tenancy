@@ -34,8 +34,8 @@ public class User extends BaseUser{
 	@PrePersist
 	public void setDefaultRoleIfNull() {
 		if(this.role == null) {
-			this.role = new Role();
-			this.role.setId(4);
+			this.role = new Role(); //create new Object
+			this.role.setId(4); // asign roleId = 4 (staff level 2)
 		}
 	}
 }
