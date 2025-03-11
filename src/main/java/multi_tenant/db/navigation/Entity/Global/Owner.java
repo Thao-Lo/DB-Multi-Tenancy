@@ -2,7 +2,6 @@ package multi_tenant.db.navigation.Entity.Global;
 
 
 
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -13,6 +12,7 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
@@ -20,6 +20,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import multi_tenant.db.navigation.Entity.BaseUser;
 import multi_tenant.db.navigation.Enum.Status;
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -31,9 +32,20 @@ public class Owner extends BaseUser{
 	@Column
 	private Status status = Status.ACTIVE;	
 	
-	@OneToMany (mappedBy = "owner", cascade = CascadeType.ALL) //owner lowecase, field in Tenant
+	//CONSIDER TO REMOVE LIST AND QUERY SEPEARTELY WHEN NEEDED
 	@JsonIgnore
+	@OneToMany (mappedBy = "owner", cascade = CascadeType.ALL, fetch = FetchType.LAZY) //owner lowecase, field in Tenant	
 	List<Tenant> tenants = new ArrayList<>();
 	
+	@JsonIgnore
+	@OneToMany(mappedBy = "owner", fetch = FetchType.LAZY) //On delete restrict
+	private List<SubPlanDetail> subPlanDetails = new ArrayList<>();
 	
+	@JsonIgnore
+	@OneToMany(mappedBy = "owner", fetch = FetchType.LAZY) //On delete restrict
+	private List<Payment> payments = new ArrayList<>();
+	
+	@JsonIgnore
+	@OneToMany (mappedBy = "owner", fetch = FetchType.LAZY) 	
+	List<TenantActivityLog> tenantActivityLogs = new ArrayList<>();
 }
