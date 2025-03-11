@@ -1,6 +1,7 @@
 package multi_tenant.db.navigation.Service;
 
 import java.lang.reflect.InvocationTargetException;
+import java.security.Principal;
 import java.time.LocalDateTime;
 import java.util.Set;
 import java.util.UUID;
@@ -30,100 +31,113 @@ public class RegisterService {
 
 	@Autowired
 	private OwnerRepository ownerRepository;
-	
+
 	@Autowired
 	private MultiEmailService multiEmailService;
 	
+	@Autowired
+	private AuthService authService;
+
 	private static final String DEVELOPER = "DEVELOPER";
 	private static final String OWNER = "OWNER";
 	private static final String USER = "USER";
 
-	public void registerNewUser(RegisterRequest request, String retristryEmail, String shopName) {	
+	public void registerNewUser(RegisterRequest request, Principal principal, String shopName) {
 		String userType = request.getUserType().toUpperCase();
 		String email = request.getEmail();
-		
-		if(!Set.of(DEVELOPER, OWNER, USER).contains(userType)) {
+		String registryRole = authService.getCurrentUserRole(principal);
+
+		if (!Set.of(DEVELOPER, OWNER, USER).contains(userType)) {
 			throw new IllegalArgumentException("Invalid User Type: " + request.getUserType());
 		}
+		boolean isGlobalRegistration = (shopName == null);
+		boolean isTenantRegistration = (shopName != null);
+		
+		if(isGlobalRegistration) {
+			if("SUPER_ADMIN".equals(registryRole) && !Set.of(DEVELOPER, OWNER).contains(userType)) {
+				 throw new IllegalArgumentException("Super Admin can only register Developer or Owner.");
+			}
+			if("ADMIN".equals(registryRole) && !Set.of(OWNER).contains(userType)){
+				throw new IllegalArgumentException("Admin (Developer) can only register Owner.");
+			}
+		}
+		if(isTenantRegistration) {
+			if(!USER.equals(userType)) {
+				throw new IllegalArgumentException("Only 'USER' type can be registered in tenant");
+			}
+		}		
+		
+		//globalUser: DEVELOPER or OWNER, or else null
 		String globalUser = userType.equalsIgnoreCase(USER) ? null : userType;
+		//if shopName == null -> "DEVELOPER or OWNER", else shopName: shop1, 2,3
 		String shopNameOrGlobalUser = (shopName == null) ? globalUser : shopName;
-		boolean isEmailExist = switch(userType) {
+		
+		//check registered email in db
+		boolean isEmailExist = switch (userType) {
 		case DEVELOPER -> developerRepository.existsByEmail(email);
 		case OWNER -> ownerRepository.existsByEmail(email);
 		case USER -> userRepository.existsByEmail(email);
 		default -> false;
 		};
-		if(isEmailExist) {
+		
+		if (isEmailExist) {
 			throw new IllegalArgumentException("Email is already existed " + email);
 		}
 		boolean isDeveloper = (Set.of(DEVELOPER, OWNER).contains(userType));
-		
+
 		switch (userType) {
 		case DEVELOPER:
-			createUser(Developer.class, request, developerRepository, retristryEmail, isDeveloper, shopNameOrGlobalUser );
+			createUser(Developer.class, request, developerRepository, principal.getName(), isDeveloper,
+					shopNameOrGlobalUser);
 			break;
 		case OWNER:
-			createUser(Owner.class, request, ownerRepository, retristryEmail, isDeveloper, shopNameOrGlobalUser );
+			createUser(Owner.class, request, ownerRepository, principal.getName(), isDeveloper, shopNameOrGlobalUser);
 			break;
 
 		case USER:
-			createUser(User.class, request, userRepository, retristryEmail, isDeveloper, shopNameOrGlobalUser );
+			createUser(User.class, request, userRepository, principal.getName(), isDeveloper, shopNameOrGlobalUser);
 			break;
 		}
 	}
 
-	public <T extends BaseUser> T createUser (Class<T> userType, RegisterRequest request, JpaRepository<T, Long> repository, String registryEmail, boolean isDeveloper, String shopNameOrGlobalUser) {
-			
-				try {
-					T user = userType.getDeclaredConstructor().newInstance();
-					user.setFirstName(request.getFirstName());
-					user.setLastName(request.getLastName());
-					user.setEmail(request.getEmail());
-					user.setCreatedBy(registryEmail);
-					user.setResetToken(UUID.randomUUID().toString());
-					user.setResetTokenExpiry(LocalDateTime.now().plusHours(1)); // 1 hour
-					
-					T savedUser = repository.save(user);
-					sendPasswordSetUpEmail(user.getEmail(), user.getResetToken(), isDeveloper, shopNameOrGlobalUser);
-					return savedUser;	
-				} catch (InstantiationException e) {
-					throw new RuntimeException("Error creating user instance: " + e.getMessage(), e);
-				} catch (IllegalAccessException e) {
-					throw new RuntimeException("Error creating user instance: " + e.getMessage(), e);
-				} catch (IllegalArgumentException e) {
-					throw new RuntimeException("Error creating user instance: " + e.getMessage(), e);
-				} catch (InvocationTargetException e) {
-					throw new RuntimeException("Error creating user instance: " + e.getMessage(), e);
-				} catch (NoSuchMethodException e) {
-					throw new RuntimeException("Error creating user instance: " + e.getMessage(), e);
-				} catch (SecurityException e) {
-					throw new RuntimeException("Error creating user instance: " + e.getMessage(), e);
-				}catch (MessagingException e) {
-				throw new RuntimeException("Error when registering new user. " + e.getMessage(), e);				
-			}			
-	}
-	
-	private void sendPasswordSetUpEmail(String email, String token, boolean isDeveloper, String shopNameOrGlobalUser) throws MessagingException {
-	    String subject = "Reset Password";
+	public <T extends BaseUser> T createUser(Class<T> userType, RegisterRequest request,
+			JpaRepository<T, Long> repository, String registryEmail, boolean isDeveloper, String shopNameOrGlobalUser) {
 
-	    String body = "<h3>Set Your New Password</h3>"
-	    			+ "</br>"
-	                + "<p>Please send the following API request to reset your password:</p>"
-	                + "<pre>"
-	                + "POST api/reset-password\n"
-	                + "Headers:\n"
-	                + (isDeveloper ? "- global-user: " + shopNameOrGlobalUser + "\n" : "- shop-name: "  + shopNameOrGlobalUser + "\n")
-	                + "Content-Type: application/json\n\n"
-	                + "Body:\n"
-	                + "{\n"
-	                + "  \"token\": \"" + token + "\",\n"
-	                + "  \"newPassword\": \"your-new-password\"\n"
-	                + "}"
-	                + "</pre>"
-	                + "<p><b>Note:</b> The token is valid for 1 hour.</p>";
+		try {
+			T user = userType.getDeclaredConstructor().newInstance(); // Reflection
+			// Owner owner = new Owner();
+			user.setFirstName(request.getFirstName());
+			user.setLastName(request.getLastName());
+			user.setEmail(request.getEmail());
+			user.setCreatedBy(registryEmail);
+			user.setResetToken(UUID.randomUUID().toString());
+			user.setResetTokenExpiry(LocalDateTime.now().plusHours(1)); // 1 hour
 
-	    multiEmailService.sendEmail(email, subject, body, isDeveloper);
+			T savedUser = repository.save(user);
+			sendPasswordSetUpEmail(user.getEmail(), user.getResetToken(), isDeveloper, shopNameOrGlobalUser);
+			return savedUser;
+		} catch (InstantiationException | IllegalAccessException | InvocationTargetException | NoSuchMethodException
+				| SecurityException e) {
+			throw new RuntimeException("Error creating user instance via Reflection: " + e.getMessage(), e);
+		} catch (MessagingException e) {
+			throw new RuntimeException("Error when registering new user. " + e.getMessage(), e);
+		}
 	}
 
+	private void sendPasswordSetUpEmail(String email, String token, boolean isDeveloper, String shopNameOrGlobalUser)
+			throws MessagingException {
+		String subject = "Reset Password";
+
+		String body = "<h3>Set Your New Password</h3>" + "</br>"
+				+ "<p>Please send the following API request to reset your password:</p>" + "<pre>"
+				+ "POST api/reset-password\n" + "Headers:\n"
+				+ (isDeveloper ? "- global-user: " + shopNameOrGlobalUser + "\n"
+						: "- shop-name: " + shopNameOrGlobalUser + "\n")
+				+ "Content-Type: application/json\n\n" + "Body:\n" + "{\n" + "  \"token\": \"" + token + "\",\n"
+				+ "  \"newPassword\": \"your-new-password\"\n" + "}" + "</pre>"
+				+ "<p><b>Note:</b> The token is valid for 1 hour.</p>";
+
+		multiEmailService.sendEmail(email, subject, body, isDeveloper);
+	}
 
 }
