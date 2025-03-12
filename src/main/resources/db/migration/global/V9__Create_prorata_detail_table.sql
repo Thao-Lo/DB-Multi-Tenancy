@@ -14,10 +14,5 @@ CREATE TABLE `db_navigation_global_multi_tenant`.`prorata_detail` (
     FOREIGN KEY (`payment_id`)
     REFERENCES `db_navigation_global_multi_tenant`.`payment` (`id`)
     ON DELETE CASCADE
-    ON UPDATE CASCADE,
-  CONSTRAINT `fk_prorata_detail_payment_type`
-    FOREIGN KEY (`payment_type_id`)
-    REFERENCES `db_navigation_global_multi_tenant`.`payment_type` (`id`)
-    ON DELETE RESTRICT
     ON UPDATE CASCADE
 );

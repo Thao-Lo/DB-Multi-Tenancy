@@ -9,7 +9,7 @@ CREATE TABLE `db_navigation_global_multi_tenant`.`subscription_plan_detail` (
   `additional_admin_count` INT NULL DEFAULT 0,
   `subscription_start` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
   `next_billing_date` TIMESTAMP NULL,
-  `status` ENUM('ACTIVE', 'CANCELLED', 'EXPIRED') NULL DEFAULT 'ACTIVE',
+  `status` ENUM('ACTIVE', 'INACTIVE', 'CANCELLED', 'EXPIRED') NULL DEFAULT 'INACTIVE',
   PRIMARY KEY (`id`),
   INDEX `idx_fk_plan_detail_owner` (`owner_id` ASC) VISIBLE,
   INDEX `idx_fk_plan_detail_subscription_plan` (`subscription_plan_id` ASC) VISIBLE,
