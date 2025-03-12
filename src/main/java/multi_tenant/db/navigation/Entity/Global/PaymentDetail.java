@@ -28,28 +28,27 @@ public class PaymentDetail {
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
-	
+
 	@Column(nullable = false)
 	private int quantity;
-	
+
 	@Column(name = "unit_price", nullable = false)
 	private BigDecimal unitPrice;
-	
+
 	@Column(nullable = false)
 	private BigDecimal amount;
-	
+
 	@Column(name = "created_at", nullable = false)
 	@CreationTimestamp
 	private LocalDateTime createdAt;
+
+	// Instead of storing the whole PaymentType, just store the ID
+	@Column(name = "payment_type_id", nullable = false)
+	private int paymentTypeId;	
 	
 	@JsonIgnore
 	@ManyToOne
-	@JoinColumn(name="payment_id",  nullable = false)
+	@JoinColumn(name = "payment_id", nullable = false)
 	private Payment payment;
-	
-	@JsonIgnore
-	@ManyToOne
-	@JoinColumn(name="payment_type_id",  nullable = false)
-	private PaymentType paymentType;
-	
+
 }

@@ -46,6 +46,9 @@ public class SubscriptionPlan {
 	@Column(name = "additional_admin_fee", precision = 10, scale = 2, nullable = false)
 	private BigDecimal additionalAmindFee;
 	
+	@Column(name = "billing_cycle", nullable = false)
+	private String billingCycle;
+	
 	@JsonIgnore
 	@OneToMany(mappedBy = "subscriptionPlan", cascade = CascadeType.ALL)
 	private List<SubPlanDetail> subPlanDetails = new ArrayList<>();

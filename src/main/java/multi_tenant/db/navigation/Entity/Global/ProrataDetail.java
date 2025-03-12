@@ -28,33 +28,38 @@ public class ProrataDetail {
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
-	
+
 	@Column(nullable = false)
 	private int quantity;
-	
+
 	@Column(name = "unit_price", nullable = false)
 	private BigDecimal unitPrice;
-	
+
 	@Column(name = "days_remaining", nullable = false)
 	private int daysRemaning;
-	
+
 	@Column(nullable = false)
 	private BigDecimal amount;
-	
+
 	@Column(name = "created_at", nullable = false)
 	@CreationTimestamp
 	private LocalDateTime createdAt;
-	
-	//fk
+
+	// fk
 	@JsonIgnore
 	@ManyToOne
-	@JoinColumn(name="payment_id",  nullable = false)
+	@JoinColumn(name = "payment_id", nullable = false)
 	private Payment payment;
+
+
+	// Instead of storing the whole PaymentType, just store the ID
+	@Column(name = "payment_type_id", nullable = false)
+	private int paymentTypeId;
 	
-	//fk
-	@JsonIgnore
-	@ManyToOne
-	@JoinColumn(name="payment_type_id",  nullable = false)
-	private PaymentType paymentType;
-	
+	// fk
+//	@JsonIgnore
+//	@ManyToOne
+//	@JoinColumn(name = "payment_type_id", nullable = false)
+//	private PaymentType paymentType;
+
 }

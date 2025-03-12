@@ -29,41 +29,44 @@ public class SubPlanDetail {
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
-	
-	@Column(name="active_tenant_count")
+
+	@Column(name = "active_tenant_count")
 	private int activeTenantCount;
 	
-	@Column(name="max_tenant", nullable = false)
+	@Column(name = "additional_tenant_count")
+	private int additionalTenantCount;
+
+	@Column(name = "max_tenant", nullable = false)
 	private int maxTenant;
-	
-	@Column(name="allocated_additional_admin")
+
+	@Column(name = "allocated_additional_admin")
 	private int allocatedAdditionalAdmin;
-	
-	@Column(name="additional_admin_count")
+
+	@Column(name = "additional_admin_count")
 	private int additionalAdminCount;
-	
-	@Column(name="subscription_start")
+
+	@Column(name = "subscription_start")
 	@CreationTimestamp
 	private LocalDateTime subscriptionStart;
-	
-	@Column(name="next_billing_date")
+
+	@Column(name = "next_billing_date")
 	private LocalDateTime nextBillingDate;
-	
+
 	@Enumerated(EnumType.STRING)
 	private PlanDetailStatus status;
-	
+
 	@JsonIgnore
-	@JoinColumn(name = "owner_id",  nullable = false)
+	@JoinColumn(name = "owner_id", nullable = false)
 	@ManyToOne
 	private Owner owner;
-	
+
 	@JsonIgnore
-	@JoinColumn(name = "subscription_plan_id",  nullable = false)
+	@JoinColumn(name = "subscription_plan_id", nullable = false)
 	@ManyToOne
 	private SubscriptionPlan subscriptionPlan;
-	
+
 	public enum PlanDetailStatus {
-		ACTIVE, CANCELLED, EXPIRED;
+		ACTIVE, INACTIVE, CANCELLED, EXPIRED;
 	}
-	
+
 }

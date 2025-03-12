@@ -45,6 +45,8 @@ public class Payment {
 	@Column(name = "status", nullable = false)
 	private PaymentStatus paymentStatus;
 	
+	@Column(name = "payment_intent_id", nullable = false)
+	private String paymentIntentId;
 	
 	@Column(name = "created_at", nullable = false)
 	@CreationTimestamp
