@@ -5,6 +5,7 @@ CREATE TABLE `db_navigation_global_multi_tenant`.`payment` (
   `subscription_plan_detail_id` INT NOT NULL,
   `amount` DECIMAL(10,2) NOT NULL,
   `status` ENUM('PENDING', 'SUCCESS', 'FAILED') NOT NULL DEFAULT 'PENDING',
+  `payment_intent_id` VARCHAR(255) NOT NULL,
   `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),

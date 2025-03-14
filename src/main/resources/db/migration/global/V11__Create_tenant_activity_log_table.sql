@@ -20,9 +20,4 @@ CREATE TABLE `db_navigation_global_multi_tenant`.`tenant_activity_log` (
     FOREIGN KEY (`owner_id`)
     REFERENCES `db_navigation_global_multi_tenant`.`owners` (`id`)
     ON DELETE RESTRICT
-    ON UPDATE CASCADE,
-  CONSTRAINT `fk_tenant_activity_log_action_type`
-    FOREIGN KEY (`action_type_id`)
-    REFERENCES `db_navigation_global_multi_tenant`.`tenant_action_type` (`id`)
-    ON DELETE RESTRICT
     ON UPDATE CASCADE);

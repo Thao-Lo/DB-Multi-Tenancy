@@ -22,6 +22,8 @@ CREATE TABLE `db_navigation_global_multi_tenant`.`owners` (
   `owner_role` ENUM('OWNER','ADMIN') NOT NULL DEFAULT 'OWNER',
   `name` VARCHAR(100) NOT NULL,
   `db_name` VARCHAR(100) NOT NULL,
+  `current_admin_count` INT NOT NULL DEFAULT 0,
+  `max_admin_count`INT NOT NULL DEFAULT 1,
   `status` ENUM('ACTIVE', 'DISABLE') NOT NULL DEFAULT 'ACTIVE',
   `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
