@@ -41,6 +41,7 @@ public class TenantActivityLog {
 	@JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "JSON")
 	private Map<String, Object> detail = new HashMap<>();
+	//(Map.of("message" , String.format("Allocate additional Admin: %d", count)))
 	
 	@Column(name="created_at", nullable = false)
 	@CreationTimestamp
@@ -56,10 +57,13 @@ public class TenantActivityLog {
 	@JoinColumn(name="owner_id", nullable = false)
 	private Owner owner;
 	
-	@JsonIgnore
-	@ManyToOne
-	@JoinColumn(name="action_type_id", nullable = false)
-	private TenantActionType tenantActionType;
+	/*REMOVE RELATIONSHIP, JUST STORE ID*/
+	@Column(name="action_type_id", nullable = false )
+	private int actionTypeId;
+//	@JsonIgnore
+//	@ManyToOne
+//	@JoinColumn(name="action_type_id", nullable = false)
+//	private TenantActionType tenantActionType;
 	
 	
 }

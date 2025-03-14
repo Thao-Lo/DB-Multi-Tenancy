@@ -42,6 +42,12 @@ public class Tenant {
 	@Column(name="db_name", nullable = false, unique = true, length = 45)
 	private String dbName;
 	
+	@Column(name="current_admin_count", nullable = false)
+	private int currentAdminCount;
+	
+	@Column(name="max_admin_count", nullable = false)
+	private int maxAdminCount;
+	
 	@Enumerated(EnumType.STRING)
 	@Column
 	private Status status;
