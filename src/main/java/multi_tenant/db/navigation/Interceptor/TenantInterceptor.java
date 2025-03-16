@@ -159,7 +159,7 @@ public class TenantInterceptor implements HandlerInterceptor {
 	        if (currentTenant != null) {
 	            logger.info("Forcing database initialization for tenant: {}", currentTenant);
 	            DataSource ds = tenantRoutingDataSource.determineTargetDataSource();
-	            ds.getConnection().close(); // Open & Close a connection to initialize it early
+	            ds.getConnection().close(); // Open & store connection in pool to initialize it early
 	        }
 	    } catch (Exception e) {
 	        logger.error("Failed to force database initialization.", e);

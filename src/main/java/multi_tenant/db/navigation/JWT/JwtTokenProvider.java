@@ -14,9 +14,7 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 
 @Component
-public class JwtTokenProvider {
-	@Value("${jwt.secret}")
-	private String secret;
+public class JwtTokenProvider {	
 	
 	private final SecretKey SECRET_KEY = Keys.hmacShaKeyFor("e9aANUQmjLR9k767rsb0Mj39GWtyy7jg1LlBjVMDvOM=".getBytes());
 	private final long ACCESS_TOKEN_VALIDITY = 3600_000;
@@ -25,7 +23,7 @@ public class JwtTokenProvider {
 	public String generateToken(String email, List<String> roles, long validity) {
 		return Jwts.builder()			
 				.setSubject(email)
-				.claim("roles", roles)
+				.claim("roles", roles) //serialize to JSON format 
 				.setIssuedAt(new Date())
 				.setExpiration(new Date(System.currentTimeMillis() + validity))
 				.signWith(SECRET_KEY) 
