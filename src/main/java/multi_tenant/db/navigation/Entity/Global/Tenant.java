@@ -68,10 +68,6 @@ public class Tenant {
 	@Column (name = "owner_role")
 	private Role ownerRole;
 	
-	@JsonIgnore
-	@OneToMany (mappedBy = "tenant", cascade = CascadeType.ALL, orphanRemoval = true) 	
-	List<TenantActivityLog> tenantActivityLogs = new ArrayList<>();
-	
 	public enum Role {
 		OWNER, ADMIN
 	}

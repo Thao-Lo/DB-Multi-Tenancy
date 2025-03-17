@@ -46,11 +46,9 @@ public class TenantActivityLog {
 	@Column(name="created_at", nullable = false)
 	@CreationTimestamp
 	private LocalDateTime createdAt;
-	
-	@JsonIgnore
-	@ManyToOne
-	@JoinColumn(name="tenant_id", nullable = false)
-	private Tenant tenant;
+		
+	@Column(name="tenant_id")
+	private long tenantId;
 	
 	@JsonIgnore
 	@ManyToOne
