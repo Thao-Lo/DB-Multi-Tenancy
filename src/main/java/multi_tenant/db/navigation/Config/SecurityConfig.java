@@ -28,6 +28,7 @@ public class SecurityConfig {
 	@Autowired
 	private JwtAuthenticationFilter jwtAuthenticationFilter;
 
+	
 //	@Bean
 //	public PasswordEncoder passwordEncoder() {
 //	    return PasswordEncoderFactories.createDelegatingPasswordEncoder();

@@ -33,17 +33,16 @@ public class CustomUserDetailsService implements UserDetailsService{
 	public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {		
 		
 		String globalUser = TenantContext.getCurrentGlobalUserType(); // either OWNER or DEVELOPER
-		Object user = null;
-			System.out.println("Tennat before query: " + TenantContext.getCurrentTenant());
 		//from Context
-		if(globalUser != null) {
-			 user = findUserByEmail(email, globalUser);
-			
-		}else {
-			System.out.println("user login");
-			 user = findUserByEmail(email, "USER"); //WRONG HERE, lazy fetching
-			 System.out.println("user");
-		}
+		Object user = findUserByEmail(email, (globalUser != null) ? globalUser : "USER");			
+		
+//		if(globalUser != null) {
+//			 user = findUserByEmail(email, globalUser);			
+//		}else {
+//			System.out.println("user login");
+//			 user = findUserByEmail(email, "USER"); //WRONG HERE, lazy fetching
+//			 System.out.println("user");
+//		}
 		if (user == null) {
 			throw new UsernameNotFoundException("User not found for email: " + email);
 		}
@@ -53,19 +52,12 @@ public class CustomUserDetailsService implements UserDetailsService{
 	}
 	
 	  private Object findUserByEmail(String email, String userType) {
-			switch (userType) {
-			case "OWNER":
-				return ownerService.getOwnerByEmail(email);
-			
-			case "DEVELOPER":
-				return developerService.getDeveloperByEmail(email);
-				
-			case "USER":
-				return userService.getUserByEmail(email);
-				
-			default:
-				return null;
-			}		 
+			return switch (userType) {
+			case "OWNER" -> ownerService.getOwnerByEmail(email);			
+			case "DEVELOPER" -> developerService.getDeveloperByEmail(email);				
+			case "USER" ->  userService.getUserByEmail(email);				
+			default -> null; 
+			};
 	  }
 	  
 	  private String getPasswordFromUser(Object user) {
@@ -75,9 +67,10 @@ public class CustomUserDetailsService implements UserDetailsService{
 		  return null;
 	  }
 	  
+	  
 	  private List<GrantedAuthority> getRolesFromUser(Object user){
 		  if (user instanceof Owner) {
-			 return Arrays.stream(Tenant.Role.values())
+			 return Arrays.stream(Tenant.Role.values()) //get roles from enum
 			  .map(role -> new SimpleGrantedAuthority("ROLE_" + role.name()))
 			  .collect(Collectors.toList());			 
 		  }
